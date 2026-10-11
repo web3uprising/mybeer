@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="pt" translate="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05070a">
+  <meta name="google" content="notranslate">
+  <title>Criar uma Moeda</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <template id="view-home" data-title="Criar uma Moeda">
+  <main class="app">
+    <header class="bar"><span>admin@web3up.org</span><b>ACM FEUP</b></header>
+    <h1>criar uma<br><u>moeda</u><span class="caret"></span></h1>
+    <p class="hint">// web 3.0 · uma nova versão da internet</p>
+    <div class="stack push">
+      <a class="primary" href="?ecra=carteira">Abrir a carteira</a>
+      <a class="secondary" href="?ecra=terminal">Abrir o terminal da loja</a>
+    </div>
+    <p class="muted">A carteira é para o telemóvel de quem paga. O terminal é para o SUNMI da loja.</p>
+  </main>
+  </template>
+  <template id="view-carteira" data-title="Carteira Moeda">
+  <main class="app">
+    <header class="bar">
+      <span>carteira · <b id="me-short">…</b></span>
+      <button id="go-backup" type="button">cópia</button>
+    </header>
+
+    <section data-screen="home" hidden>
+      <h1>a minha <u>carteira</u><span class="caret"></span></h1>
+      <div class="token-list" id="tokens"></div>
+      <div class="actions">
+        <button class="primary" id="go-pay" type="button">Pagar</button>
+        <button class="secondary" id="go-receive" type="button">Receber</button>
+        <button class="secondary" id="go-send" type="button">Enviar</button>
+        <button class="secondary" id="go-create" type="button">Criar moeda</button>
+      </div>
+      <details>
+        <summary>Adicionar moeda pelo endereço</summary>
+        <div class="stack" style="margin-top:10px">
+          <input id="add-token" placeholder="0x…" autocomplete="off" spellcheck="false">
+          <button class="secondary" id="add-token-go" type="button">Adicionar</button>
+        </div>
+      </details>
+      <p class="muted push">Rede de teste Polkadot Hub. As moedas não têm valor real.</p>
+    </section>
+
+    <section data-screen="scan" hidden>
+      <h2>aponta para o <u>código</u></h2>
+      <div class="scanner"><video id="scan-video"></video></div>
+      <p class="muted" id="scan-error"></p>
+      <button class="secondary push" id="scan-cancel" type="button">Cancelar</button>
+    </section>
+
+    <section data-screen="confirm" hidden>
+      <h2>confirmar <u>pagamento</u></h2>
+      <div class="card">
+        <div class="row"><span class="label">Para</span><span class="value" id="confirm-to"></span></div>
+        <div class="row"><span class="label">Valor</span><span class="big green" id="confirm-amount"></span></div>
+        <div class="row"><span class="label">Taxa da moeda</span><span class="value amber" id="confirm-fee"></span></div>
+        <div class="row"><span class="label">Saldo</span><span class="value" id="confirm-balance"></span></div>
+      </div>
+      <p class="muted" id="confirm-error"></p>
+      <div class="actions push">
+        <button class="secondary" id="confirm-cancel" type="button">Cancelar</button>
+        <button class="primary" id="confirm-go" type="button">Pagar</button>
+      </div>
+    </section>
+
+    <section data-screen="pending" hidden>
+      <h2>a enviar<span class="caret"></span></h2>
+      <div class="status"><span class="dot"></span><span id="pending-status">A assinar…</span></div>
+    </section>
+
+    <section data-screen="done" hidden>
+      <span class="success-mark">feito_</span>
+      <div class="card">
+        <div class="row"><span class="label">Valor</span><span class="value green" id="done-amount"></span></div>
+        <div class="row"><span class="label">Para</span><span class="value" id="done-to"></span></div>
+        <a class="value amber" id="done-link" target="_blank" rel="noopener">ver na cadeia</a>
+      </div>
+      <button class="primary push" id="done-home" type="button">Voltar</button>
+    </section>
+
+    <section data-screen="receive" hidden>
+      <h2>receber<u>_</u></h2>
+      <div class="qr" id="receive-qr"></div>
+      <div class="card"><span class="label">O meu endereço</span><span class="value" id="receive-address"></span></div>
+      <div class="actions push">
+        <button class="secondary" id="receive-copy" type="button">Copiar</button>
+        <button class="primary" id="receive-back" type="button">Voltar</button>
+      </div>
+    </section>
+
+    <section data-screen="send" hidden>
+      <h2>enviar<u>_</u></h2>
+      <label class="field"><span class="label">O quê</span><select id="send-asset"></select></label>
+      <label class="field"><span class="label">Para</span><input id="send-to" placeholder="0x…" autocomplete="off" spellcheck="false"></label>
+      <label class="field"><span class="label">Quanto</span><input id="send-amount" inputmode="decimal" placeholder="10"></label>
+      <p class="muted" id="send-error"></p>
+      <div class="stack push">
+        <button class="secondary" id="send-scan" type="button">Ler endereço com a câmara</button>
+        <div class="actions">
+          <button class="secondary" id="send-back" type="button">Voltar</button>
+          <button class="primary" id="send-go" type="button">Enviar</button>
+        </div>
+      </div>
+    </section>
+
+    <section data-screen="create" hidden>
+      <h2>desenhar a <u>moeda</u></h2>
+      <label class="field"><span class="label">Nome</span><input id="create-name" placeholder="Fino Coin" maxlength="32"></label>
+      <label class="field"><span class="label">Símbolo</span><input id="create-symbol" placeholder="FINO" maxlength="8" style="text-transform:uppercase"></label>
+      <label class="field"><span class="label">Quantidade inicial</span><input id="create-supply" inputmode="numeric" value="1000000"></label>
+      <label class="field"><span class="label">Máximo que pode existir (0 = sem limite)</span><input id="create-max" inputmode="numeric" value="0"></label>
+      <label class="field"><span class="label">Inflação por ano, %</span><input id="create-inflation" inputmode="decimal" value="5"></label>
+      <label class="field"><span class="label">Taxa por pagamento, % (máx. 10)</span><input id="create-fee" inputmode="decimal" value="1"></label>
+      <p class="muted">A taxa é paga por quem envia e vai para ti. A inflação podes emitir quando quiseres na página da moeda.</p>
+      <p class="muted" id="create-error"></p>
+      <div class="actions push">
+        <button class="secondary" id="create-back" type="button">Voltar</button>
+        <button class="primary" id="create-go" type="button">Lançar</button>
+      </div>
+    </section>
+
+    <section data-screen="token" hidden>
+      <h2 id="token-title"></h2>
+      <div class="card">
+        <div class="row"><span class="label">Saldo</span><span class="value green" id="token-balance"></span></div>
+        <div class="row"><span class="label">Em circulação</span><span class="value" id="token-supply"></span></div>
+        <div class="row"><span class="label">Taxa</span><span class="value" id="token-fee"></span></div>
+        <div class="row"><span class="label">Inflação por emitir</span><span class="value" id="token-pending"></span></div>
+        <span class="label">Endereço</span><span class="value" id="token-address"></span>
+      </div>
+      <p class="muted">Mostra este código ao terminal da loja para aceitar esta moeda.</p>
+      <div class="qr" id="token-qr" style="width:min(100%,240px)"></div>
+      <div class="stack push">
+        <button class="secondary" id="token-mint" type="button" hidden>Emitir inflação</button>
+        <div class="actions">
+          <button class="secondary" id="token-forget" type="button">Esconder</button>
+          <button class="primary" id="token-back" type="button">Voltar</button>
+        </div>
+      </div>
+    </section>
+
+    <section data-screen="backup" hidden>
+      <h2>cópia de <u>segurança</u></h2>
+      <p class="muted">Esta chave é a tua carteira. Quem a tiver pode gastar o que lá está. Guarda-a para não perderes as moedas se limpares o browser.</p>
+      <button class="secondary" id="backup-reveal" type="button">Mostrar chave</button>
+      <div class="card" id="backup-key" hidden><span class="value"></span></div>
+      <details>
+        <summary>Usar outra chave</summary>
+        <div class="stack" style="margin-top:10px">
+          <input id="backup-import" placeholder="0x… 64 caracteres" autocomplete="off" spellcheck="false">
+          <button class="secondary" id="backup-import-go" type="button">Trocar de carteira</button>
+        </div>
+      </details>
+      <button class="primary push" id="backup-back" type="button">Voltar</button>
+    </section>
+  </main>
+  </template>
+  <template id="view-terminal" data-title="Terminal Moeda">
+  <main class="app">
+    <header class="bar no-print">
+      <span id="shop-name">terminal</span>
+      <button id="open-settings" type="button">definições</button>
+    </header>
+
+    <section data-screen="setup" hidden>
+      <h1>ligar o <u>terminal</u><span class="caret"></span></h1>
+      <p class="hint">// que moeda aceita esta loja?</p>
+      <label class="field">
+        <span class="label">Endereço da moeda</span>
+        <input id="setup-token" placeholder="0x…" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="field">
+        <span class="label">Nome da loja</span>
+        <input id="setup-name" placeholder="Bar da AEFEUP" autocomplete="off">
+      </label>
+      <p class="muted" id="setup-error"></p>
+      <div class="stack push">
+        <button class="secondary" id="setup-scan" type="button">Ler QR da moeda</button>
+        <button class="primary" id="setup-save" type="button">Guardar</button>
+      </div>
+      <div class="scanner" id="setup-scanner" hidden><video></video></div>
+    </section>
+
+    <section data-screen="keypad" hidden>
+      <div class="row">
+        <span class="label">Moeda</span>
+        <span class="value amber" id="token-symbol">…</span>
+      </div>
+      <div class="amount-display">
+        <span class="big" id="amount">0</span>
+      </div>
+      <div class="keypad" id="keypad">
+        <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+        <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+        <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+        <button type="button">,</button><button type="button">0</button><button type="button" aria-label="Apagar">⌫</button>
+      </div>
+      <div class="actions push">
+        <button class="secondary" id="open-history" type="button">Vendas</button>
+        <button class="primary" id="charge" type="button" disabled>Cobrar</button>
+      </div>
+    </section>
+
+    <section data-screen="charge" hidden>
+      <div class="row">
+        <span class="label">A cobrar</span>
+        <span class="big green" id="charge-amount"></span>
+      </div>
+      <div class="qr" id="charge-qr"></div>
+      <div class="status"><span class="dot"></span><span id="charge-status">À espera do pagamento…</span></div>
+      <p class="muted">Aponta a câmara do telemóvel para o código, ou usa Pagar na carteira.</p>
+      <button class="secondary push" id="charge-cancel" type="button">Cancelar</button>
+    </section>
+
+    <section data-screen="paid" hidden>
+      <div class="no-print stack">
+        <span class="success-mark">pago_</span>
+        <div class="card">
+          <div class="row"><span class="label">Valor</span><span class="value green" id="paid-amount"></span></div>
+          <div class="row"><span class="label">De</span><span class="value" id="paid-from"></span></div>
+          <div class="row"><span class="label">Bloco</span><span class="value" id="paid-block"></span></div>
+        </div>
+        <p class="muted">Recibo verificável na cadeia:</p>
+        <div class="qr" id="paid-qr" style="width:min(100%,220px)"></div>
+      </div>
+      <div class="receipt" hidden style="flex-direction:column;gap:4px">
+        <strong id="receipt-shop"></strong>
+        <span id="receipt-date"></span>
+        <span id="receipt-amount"></span>
+        <span id="receipt-from"></span>
+        <span id="receipt-tx" style="word-break:break-all"></span>
+        <img id="receipt-qr" alt="" style="width:40mm;height:40mm">
+      </div>
+      <div class="actions push no-print">
+        <button class="secondary" id="print" type="button">Imprimir</button>
+        <button class="primary" id="new-sale" type="button">Nova venda</button>
+      </div>
+    </section>
+
+    <section data-screen="history" hidden>
+      <h2>vendas<u>_</u></h2>
+      <div class="card">
+        <div class="row"><span class="label">Total hoje</span><span class="value green" id="history-total"></span></div>
+        <div class="row"><span class="label">Saldo do terminal</span><span class="value" id="history-balance"></span></div>
+      </div>
+      <div class="log" id="history-list"></div>
+      <button class="secondary push" id="history-back" type="button">Voltar</button>
+    </section>
+
+    <section data-screen="settings" hidden>
+      <h2>definições<u>_</u></h2>
+      <div class="card">
+        <span class="label">Endereço que recebe</span>
+        <span class="value" id="settings-address"></span>
+        <span class="label">Moeda</span>
+        <span class="value" id="settings-token"></span>
+      </div>
+      <details>
+        <summary>Levantar saldo para outra carteira</summary>
+        <div class="stack" style="margin-top:10px">
+          <input id="withdraw-to" placeholder="0x… destino" autocomplete="off" spellcheck="false">
+          <button class="secondary" id="withdraw" type="button">Enviar tudo</button>
+          <p class="muted">Precisa de um pouco de PAS no terminal para pagar a rede.</p>
+        </div>
+      </details>
+      <div class="stack push">
+        <button class="secondary" id="settings-reset" type="button">Trocar de moeda</button>
+        <button class="primary" id="settings-back" type="button">Voltar</button>
+      </div>
+    </section>
+  </main>
+  </template>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
