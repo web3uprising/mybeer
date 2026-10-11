@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#05070a">
+  <meta name="theme-color" content="#ffffff">
   <meta name="google" content="notranslate">
   <title>Terminal Moeda</title>
-  <link rel="stylesheet" href="../shared/src/styles.css">
+  <link rel="stylesheet" href="https://api.fontshare.com/css?f%5B%5D=switzer@400,500,600&display=swap">
+  <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
   <main class="app">
@@ -16,8 +17,9 @@
     </header>
 
     <section data-screen="setup" hidden>
-      <h1>ligar o <u>terminal</u><span class="caret"></span></h1>
-      <p class="hint">// que moeda aceita esta loja?</p>
+      <p class="eyebrow">mybeer · terminal</p>
+      <h1>Ligar o <em>terminal</em></h1>
+      <p class="muted">Que moeda aceita esta loja?</p>
       <label class="field">
         <span class="label">Endereço da moeda</span>
         <input id="setup-token" placeholder="0x…" autocomplete="off" spellcheck="false">
@@ -67,7 +69,7 @@
 
     <section data-screen="paid" hidden>
       <div class="no-print stack">
-        <span class="success-mark">pago_</span>
+        <span class="success-mark">Pago</span>
         <div class="card">
           <div class="row"><span class="label">Valor</span><span class="value green" id="paid-amount"></span></div>
           <div class="row"><span class="label">De</span><span class="value" id="paid-from"></span></div>
@@ -91,7 +93,7 @@
     </section>
 
     <section data-screen="history" hidden>
-      <h2>vendas<u>_</u></h2>
+      <h2><em>Vendas</em></h2>
       <div class="card">
         <div class="row"><span class="label">Total hoje</span><span class="value green" id="history-total"></span></div>
         <div class="row"><span class="label">Saldo do terminal</span><span class="value" id="history-balance"></span></div>
@@ -101,7 +103,7 @@
     </section>
 
     <section data-screen="settings" hidden>
-      <h2>definições<u>_</u></h2>
+      <h2><em>Definições</em></h2>
       <div class="card">
         <span class="label">Endereço que recebe</span>
         <span class="value" id="settings-address"></span>
