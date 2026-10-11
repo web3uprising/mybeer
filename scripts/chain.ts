@@ -1,7 +1,7 @@
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from "node:fs"
 import { createPublicClient, createWalletClient, http } from "viem"
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts"
-import { polkadotHubTestnet } from "../src/chain"
+import { polkadotHubTestnet } from "../apps/shared/src/chain"
 
 export const publicClient = createPublicClient({ chain: polkadotHubTestnet, transport: http() })
 

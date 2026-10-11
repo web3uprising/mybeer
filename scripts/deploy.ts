@@ -1,5 +1,5 @@
 import { parseUnits } from "viem"
-import { moedaAbi, moedaBytecode } from "../src/generated/moeda"
+import { moedaAbi, moedaBytecode } from "../apps/shared/src/generated/moeda"
 import { publicClient, walletFor } from "./chain"
 
 const [name = "Fino Coin", symbol = "FINO", supply = "1000000", max = "0", inflationPct = "5", feePct = "1"] = process.argv.slice(2)

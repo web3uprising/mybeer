@@ -1,6 +1,6 @@
 import { createWalletClient, http, parseEther } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
-import { polkadotHubTestnet } from "../src/chain"
+import { polkadotHubTestnet } from "../apps/shared/src/chain"
 import { loadKey, publicClient } from "./chain"
 
 if (!process.env.RPC_URL?.includes("127.0.0.1")) throw new Error("devnet only")

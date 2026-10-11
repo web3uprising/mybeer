@@ -1,6 +1,6 @@
 import { formatEther, formatUnits, parseAbiItem, parseEther, parseUnits, type Address } from "viem"
-import { moedaAbi } from "../src/generated/moeda"
-import { decodePaymentRequest, encodePaymentRequest } from "../src/lib/pay-uri"
+import { moedaAbi } from "../apps/shared/src/generated/moeda"
+import { decodePaymentRequest, encodePaymentRequest } from "../apps/shared/src/lib/pay-uri"
 import { loadKey, publicClient, walletFor } from "./chain"
 
 const token = process.argv[2] as Address

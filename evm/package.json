@@ -1,0 +1,18 @@
+{
+  "name": "@mybeer/evm",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.ts --network polkadotHubTestnet",
+    "export-abi": "hardhat compile && tsx scripts/export-abi.ts"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
+    "@openzeppelin/contracts": "^5.6.1",
+    "hardhat": "^2.26.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "viem": "^2.57.3"
+  }
+}

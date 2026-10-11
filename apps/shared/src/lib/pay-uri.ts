@@ -14,7 +14,7 @@ export function encodePaymentRequest({ token, to, amount, chainId }: PaymentRequ
 const PATTERN = /^ethereum:(0x[0-9a-fA-F]{40})@(\d+)\/transfer\?(.+)$/
 
 export function walletLink(origin: string, request: PaymentRequest): string {
-  return `${origin}/?ecra=carteira#pay=${encodeURIComponent(encodePaymentRequest(request))}`
+  return `${origin}/#pay=${encodeURIComponent(encodePaymentRequest(request))}`
 }
 
 export function decodePaymentRequest(uri: string): PaymentRequest | null {

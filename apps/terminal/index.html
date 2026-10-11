@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt" translate="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05070a">
+  <meta name="google" content="notranslate">
+  <title>Terminal Moeda</title>
+  <link rel="stylesheet" href="../shared/src/styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="bar no-print">
+      <span id="shop-name">terminal</span>
+      <button id="open-settings" type="button">definições</button>
+    </header>
+
+    <section data-screen="setup" hidden>
+      <h1>ligar o <u>terminal</u><span class="caret"></span></h1>
+      <p class="hint">// que moeda aceita esta loja?</p>
+      <label class="field">
+        <span class="label">Endereço da moeda</span>
+        <input id="setup-token" placeholder="0x…" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="field">
+        <span class="label">Nome da loja</span>
+        <input id="setup-name" placeholder="Bar da AEFEUP" autocomplete="off">
+      </label>
+      <p class="muted" id="setup-error"></p>
+      <div class="stack push">
+        <button class="secondary" id="setup-scan" type="button">Ler QR da moeda</button>
+        <button class="primary" id="setup-save" type="button">Guardar</button>
+      </div>
+      <div class="scanner" id="setup-scanner" hidden><video></video></div>
+    </section>
+
+    <section data-screen="keypad" hidden>
+      <div class="row">
+        <span class="label">Moeda</span>
+        <span class="value amber" id="token-symbol">…</span>
+      </div>
+      <div class="amount-display">
+        <span class="big" id="amount">0</span>
+      </div>
+      <div class="keypad" id="keypad">
+        <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+        <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+        <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+        <button type="button">,</button><button type="button">0</button><button type="button" aria-label="Apagar">⌫</button>
+      </div>
+      <div class="actions push">
+        <button class="secondary" id="open-history" type="button">Vendas</button>
+        <button class="primary" id="charge" type="button" disabled>Cobrar</button>
+      </div>
+    </section>
+
+    <section data-screen="charge" hidden>
+      <div class="row">
+        <span class="label">A cobrar</span>
+        <span class="big green" id="charge-amount"></span>
+      </div>
+      <div class="qr" id="charge-qr"></div>
+      <div class="status"><span class="dot"></span><span id="charge-status">À espera do pagamento…</span></div>
+      <p class="muted">Aponta a câmara do telemóvel para o código, ou usa Pagar na carteira.</p>
+      <button class="secondary push" id="charge-cancel" type="button">Cancelar</button>
+    </section>
+
+    <section data-screen="paid" hidden>
+      <div class="no-print stack">
+        <span class="success-mark">pago_</span>
+        <div class="card">
+          <div class="row"><span class="label">Valor</span><span class="value green" id="paid-amount"></span></div>
+          <div class="row"><span class="label">De</span><span class="value" id="paid-from"></span></div>
+          <div class="row"><span class="label">Bloco</span><span class="value" id="paid-block"></span></div>
+        </div>
+        <p class="muted">Recibo verificável na cadeia:</p>
+        <div class="qr" id="paid-qr" style="width:min(100%,220px)"></div>
+      </div>
+      <div class="receipt" hidden style="flex-direction:column;gap:4px">
+        <strong id="receipt-shop"></strong>
+        <span id="receipt-date"></span>
+        <span id="receipt-amount"></span>
+        <span id="receipt-from"></span>
+        <span id="receipt-tx" style="word-break:break-all"></span>
+        <img id="receipt-qr" alt="" style="width:40mm;height:40mm">
+      </div>
+      <div class="actions push no-print">
+        <button class="secondary" id="print" type="button">Imprimir</button>
+        <button class="primary" id="new-sale" type="button">Nova venda</button>
+      </div>
+    </section>
+
+    <section data-screen="history" hidden>
+      <h2>vendas<u>_</u></h2>
+      <div class="card">
+        <div class="row"><span class="label">Total hoje</span><span class="value green" id="history-total"></span></div>
+        <div class="row"><span class="label">Saldo do terminal</span><span class="value" id="history-balance"></span></div>
+      </div>
+      <div class="log" id="history-list"></div>
+      <button class="secondary push" id="history-back" type="button">Voltar</button>
+    </section>
+
+    <section data-screen="settings" hidden>
+      <h2>definições<u>_</u></h2>
+      <div class="card">
+        <span class="label">Endereço que recebe</span>
+        <span class="value" id="settings-address"></span>
+        <span class="label">Moeda</span>
+        <span class="value" id="settings-token"></span>
+      </div>
+      <details>
+        <summary>Levantar saldo para outra carteira</summary>
+        <div class="stack" style="margin-top:10px">
+          <input id="withdraw-to" placeholder="0x… destino" autocomplete="off" spellcheck="false">
+          <button class="secondary" id="withdraw" type="button">Enviar tudo</button>
+          <p class="muted">Precisa de um pouco de PAS no terminal para pagar a rede.</p>
+        </div>
+      </details>
+      <div class="stack push">
+        <button class="secondary" id="settings-reset" type="button">Trocar de moeda</button>
+        <button class="primary" id="settings-back" type="button">Voltar</button>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

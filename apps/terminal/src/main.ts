@@ -1,12 +1,12 @@
 import QRCode from "qrcode"
-import { publicOrigin } from "./lib/origin"
+import { WALLET_URL } from "../../shared/src/links"
 import { getAddress, isAddress, parseAbiItem, type Address, type Hash } from "viem"
-import { moedaAbi } from "./generated/moeda"
-import { $, errorText, short, show, toast } from "./lib/dom"
-import { decodeAddress, walletLink } from "./lib/pay-uri"
-import { startScanner, type Scanner } from "./lib/scanner"
-import { formatAmount, parseAmount, readToken, tokenBalance, type TokenInfo } from "./lib/tokens"
-import { chain, explorerTx, publicClient, walletFor } from "./lib/wallet"
+import { moedaAbi } from "../../shared/src/generated/moeda"
+import { $, errorText, short, show, toast } from "../../shared/src/lib/dom"
+import { decodeAddress, walletLink } from "../../shared/src/lib/pay-uri"
+import { startScanner, type Scanner } from "../../shared/src/lib/scanner"
+import { formatAmount, parseAmount, readToken, tokenBalance, type TokenInfo } from "../../shared/src/lib/tokens"
+import { chain, explorerTx, publicClient, walletFor } from "../../shared/src/lib/wallet"
 
 const TOKEN_KEY = "moeda/terminal/token"
 const NAME_KEY = "moeda/terminal/name"
@@ -49,7 +49,7 @@ function configuredToken(): Address | null {
     localStorage.setItem(TOKEN_KEY, getAddress(fromUrl))
     const name = new URLSearchParams(location.search).get("loja")
     if (name) localStorage.setItem(NAME_KEY, name)
-    history.replaceState(null, "", `${location.pathname}?ecra=terminal`)
+    history.replaceState(null, "", location.pathname)
   }
   const stored = localStorage.getItem(TOKEN_KEY)
   return stored && isAddress(stored) ? getAddress(stored) : null
@@ -116,7 +116,7 @@ async function charge() {
   if (price === 0n) return
   const saleTag = BigInt((crypto.getRandomValues(new Uint32Array(1))[0] % 999_999) + 1)
   const amount = price + saleTag
-  const uri = walletLink(publicOrigin(), { token: token.address, to: merchant, amount, chainId: chain.id })
+  const uri = walletLink(WALLET_URL, { token: token.address, to: merchant, amount, chainId: chain.id })
   $("#charge-amount").textContent = `${formatAmount(amount, token.decimals)} ${token.symbol}`
   $("#charge-status").textContent = "À espera do pagamento…"
   const qr = $("#charge-qr")

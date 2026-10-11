@@ -2,3 +2,6 @@ node_modules
 dist
 keys
 .env*
+evm/artifacts
+evm/cache
+evm/typechain-types

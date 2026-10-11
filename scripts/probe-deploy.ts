@@ -1,5 +1,5 @@
 import { encodeDeployData, parseUnits } from "viem"
-import { moedaAbi, moedaBytecode } from "../src/generated/moeda"
+import { moedaAbi, moedaBytecode } from "../apps/shared/src/generated/moeda"
 import { publicClient } from "./chain"
 
 const data = encodeDeployData({ abi: moedaAbi, bytecode: moedaBytecode, args: ["Probe", "PRB", parseUnits("1000", 18), 0n, 500n, 100n] })

@@ -1,10 +1,10 @@
 import QRCode from "qrcode"
-import { publicOrigin } from "./lib/origin"
+import { TERMINAL_URL } from "../../shared/src/links"
 import { isHex, parseEther, parseUnits, type Address, type Hash } from "viem"
-import { moedaAbi, moedaBytecode } from "./generated/moeda"
-import { $, errorText, short, show, toast } from "./lib/dom"
-import { decodeAddress, decodePaymentRequest, type PaymentRequest } from "./lib/pay-uri"
-import { startScanner, type Scanner } from "./lib/scanner"
+import { moedaAbi, moedaBytecode } from "../../shared/src/generated/moeda"
+import { $, errorText, short, show, toast } from "../../shared/src/lib/dom"
+import { decodeAddress, decodePaymentRequest, type PaymentRequest } from "../../shared/src/lib/pay-uri"
+import { startScanner, type Scanner } from "../../shared/src/lib/scanner"
 import {
   feeFor,
   forgetToken,
@@ -15,8 +15,8 @@ import {
   savedTokens,
   tokenBalance,
   type TokenInfo,
-} from "./lib/tokens"
-import { chain, explorerTx, loadOrCreateKey, publicClient, replaceKey, walletFor } from "./lib/wallet"
+} from "../../shared/src/lib/tokens"
+import { chain, explorerTx, loadOrCreateKey, publicClient, replaceKey, walletFor } from "../../shared/src/lib/wallet"
 
 const SCOPE = "carteira"
 let wallet = walletFor(SCOPE)
@@ -32,7 +32,7 @@ function ingestUrlToken() {
   const address = param ? decodeAddress(param) : null
   if (address) {
     rememberToken(address)
-    history.replaceState(null, "", `${location.pathname}?ecra=carteira`)
+    history.replaceState(null, "", location.pathname)
   }
 }
 
@@ -273,7 +273,7 @@ async function openTokenPage(info: TokenInfo) {
   $("#token-address").textContent = info.address
   $("#token-fee").textContent = `${Number(info.feeBps) / 100}%`
   for (const id of ["#token-balance", "#token-supply", "#token-pending"]) $(id).textContent = "…"
-  const shareUrl = `${publicOrigin()}/?ecra=terminal&token=${info.address}`
+  const shareUrl = `${TERMINAL_URL}/?token=${info.address}`
   const qr = $("#token-qr")
   qr.replaceChildren()
   const canvas = document.createElement("canvas")
@@ -384,7 +384,7 @@ $("#add-token-go").addEventListener("click", async () => {
 
 function pendingPayLink() {
   const request = decodePaymentRequest(location.hash)
-  if (request) history.replaceState(null, "", `${location.pathname}?ecra=carteira`)
+  if (request) history.replaceState(null, "", location.pathname)
   return request
 }
 
