@@ -94,13 +94,14 @@ export function receiptEscPos(receipt: Receipt): string {
 }
 
 /**
- * Builds a link that hands the receipt to the RawBT app, which prints on the SUNMI's built-in printer.
+ * Builds a link that hands the receipt to the mybeer print bridge in android/print-bridge, which
+ * feeds it to the SUNMI printer service.
  *
  * The dot.li sandbox has no allow-modals, so window.print() is ignored, but it keeps allow-popups,
  * which is what lets Chrome open an app link from inside the frame.
  */
-export function rawbtLink(receipt: Receipt): string {
-  return `intent:base64,${receiptEscPos(receipt)}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`
+export function printLink(receipt: Receipt): string {
+  return `intent:base64,${receiptEscPos(receipt)}#Intent;scheme=mybeer-print;package=dot.mybeer.print;end;`
 }
 
 export function isAndroid(): boolean {
