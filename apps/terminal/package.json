@@ -9,7 +9,6 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "jsqr": "^1.4.0",
     "qrcode": "^1.5.4",
     "viem": "^2.57.3"
   },

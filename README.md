@@ -6,9 +6,9 @@ ACM FEUP.
 | Pasta | O que é |
 |---|---|
 | `apps/wallet` | A carteira no telemóvel de quem paga. Cria a chave no browser, mostra saldos, lança moedas, envia e paga. |
-| `apps/terminal` | O terminal da loja no Chrome do SUNMI V3. Recebe o valor, mostra o QR do pagamento e espera que chegue à cadeia. |
+| `apps/terminal` | O terminal da loja no Chrome do SUNMI V3. Pede o número de cervejas e a moeda, mostra o QR do pagamento e espera que chegue à cadeia. |
 | `apps/shared` | Código comum às duas apps: rede, carteira, moedas, QR e estilos. |
-| `evm` | A moeda de exemplo do Level 1, em Hardhat, com testes e deploy. |
+| `evm` | A moeda de exemplo do Level 1 e o registo de moedas aceites no bar, em Hardhat, com testes e deploy. |
 | `scripts` | Ferramentas do organizador: conta, envio de PAS e teste ponta a ponta. |
 
 ## Correr
@@ -31,6 +31,17 @@ explorador `https://blockscout-testnet.polkadot.io`. Os blocos saem a cada 2,4 s
 
 O RPC da Polkadot rejeita `null` dentro de `topics` em `eth_getLogs`. O terminal pede todos
 os `Transfer` da moeda e filtra o destino no browser por isso.
+
+## Registo de moedas
+
+O terminal lê as moedas aceites do contrato `CoinRegistry` em
+`0xe7d799147276e7de57a41b8e00eb7d396b43537a`, que muda com `VITE_REGISTRY_ADDRESS`. Qualquer
+pessoa adiciona uma moeda que cumpra a interface ERC20, com o preço de uma cerveja. Só quem a
+adicionou, ou o dono do registo, muda o preço ou a retira.
+
+```sh
+REGISTRY_ADDRESS=0xe7d7… COIN_ADDRESS=0x… BEER_PRICE=2 npm run add-coin -w evm
+```
 
 ## Publicar num domínio .dot
 

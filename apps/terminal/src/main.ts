@@ -1,20 +1,28 @@
 import QRCode from "qrcode"
-import { WALLET_URL } from "../../shared/src/links"
-import { getAddress, isAddress, parseAbiItem, type Address, type Hash } from "viem"
+import { parseAbiItem, type Address, type Hash } from "viem"
 import { moedaAbi } from "../../shared/src/generated/moeda"
-import { $, errorText, short, show, toast } from "../../shared/src/lib/dom"
+import { WALLET_URL } from "../../shared/src/links"
+import { $, copy, errorText, short, show, toast } from "../../shared/src/lib/dom"
 import { decodeAddress, walletLink } from "../../shared/src/lib/pay-uri"
-import { startScanner, type Scanner } from "../../shared/src/lib/scanner"
-import { formatAmount, parseAmount, readToken, tokenBalance, type TokenInfo } from "../../shared/src/lib/tokens"
-import { chain, explorerTx, publicClient, walletFor } from "../../shared/src/lib/wallet"
+import { listedCoins, REGISTRY_ADDRESS, type ListedCoin } from "../../shared/src/lib/registry"
+import { formatAmount, tokenBalance } from "../../shared/src/lib/tokens"
+import { chain, explorerAddress, explorerTx, publicClient, walletFor } from "../../shared/src/lib/wallet"
+import { isAndroid, rawbtLink, type Receipt } from "./receipt"
 
-const TOKEN_KEY = "moeda/terminal/token"
 const NAME_KEY = "moeda/terminal/name"
 const SALES_KEY = "moeda/terminal/sales"
+const MAX_BEERS = 20
+const CONFIRM_MS = 1_600
+/** The Hub RPC can report a block before its logs are queryable, so every poll looks back over the whole sale instead of only new blocks. */
+const LOG_WINDOW = 300n
 
 const transferEvent = parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)")
 
 interface Sale {
+  token: Address
+  symbol: string
+  decimals: number
+  beers: number
   amount: string
   from: Address
   hash: Hash
@@ -25,15 +33,15 @@ interface Sale {
 const wallet = walletFor("terminal")
 const merchant = wallet.account.address
 
-let token: TokenInfo | null = null
-let typed = ""
+let beers = 1
+let coins: ListedCoin[] = []
 let stopWatching: (() => void) | null = null
-let setupScanner: Scanner | null = null
 let lastSale: Sale | null = null
 
 function sales(): Sale[] {
   try {
-    return JSON.parse(localStorage.getItem(SALES_KEY) ?? "[]")
+    const stored: Partial<Sale>[] = JSON.parse(localStorage.getItem(SALES_KEY) ?? "[]")
+    return stored.filter((sale): sale is Sale => Boolean(sale.token && sale.beers))
   } catch {
     return []
   }
@@ -43,126 +51,141 @@ function recordSale(sale: Sale) {
   localStorage.setItem(SALES_KEY, JSON.stringify([sale, ...sales()].slice(0, 200)))
 }
 
-function configuredToken(): Address | null {
-  const fromUrl = new URLSearchParams(location.search).get("token")
-  if (fromUrl && isAddress(fromUrl)) {
-    localStorage.setItem(TOKEN_KEY, getAddress(fromUrl))
-    const name = new URLSearchParams(location.search).get("loja")
-    if (name) localStorage.setItem(NAME_KEY, name)
-    history.replaceState(null, "", location.pathname)
-  }
-  const stored = localStorage.getItem(TOKEN_KEY)
-  return stored && isAddress(stored) ? getAddress(stored) : null
+function shopName() {
+  return localStorage.getItem(NAME_KEY) || "terminal"
 }
 
-async function boot() {
-  $("#shop-name").textContent = localStorage.getItem(NAME_KEY) || "terminal"
-  const address = configuredToken()
-  if (!address) {
-    show("setup")
-    return
-  }
-  try {
-    token = await readToken(address)
-    $("#token-symbol").textContent = token.symbol
-    showKeypad()
-  } catch (error) {
-    $("#setup-error").textContent = `Não encontrei a moeda ${short(address)}: ${errorText(error)}`
-    ;($("#setup-token") as HTMLInputElement).value = address
-    show("setup")
-  }
+function beersLabel(count: number) {
+  return count === 1 ? "1 cerveja" : `${count} cervejas`
 }
 
-function showKeypad() {
-  typed = ""
-  renderAmount()
-  show("keypad")
+function readShopFromUrl() {
+  const name = new URLSearchParams(location.search).get("loja")
+  if (!name) return
+  localStorage.setItem(NAME_KEY, name)
+  history.replaceState(null, "", location.pathname)
 }
 
-function typedValue(): bigint {
-  if (!token || !typed || typed === ",") return 0n
-  try {
-    return parseAmount(typed, token.decimals)
-  } catch {
-    return 0n
-  }
+function showBeers() {
+  beers = 1
+  renderBeers()
+  show("beers")
 }
 
-function renderAmount() {
-  $("#amount").textContent = typed || "0"
-  ;($("#charge") as HTMLButtonElement).disabled = typedValue() === 0n
+function renderBeers() {
+  $("#beers").textContent = String(beers)
+  ;($("#beers-less") as HTMLButtonElement).disabled = beers <= 1
+  ;($("#beers-more") as HTMLButtonElement).disabled = beers >= MAX_BEERS
+  $("#beers-quick")
+    .querySelectorAll("button")
+    .forEach((button) => button.setAttribute("aria-pressed", String(Number(button.textContent) === beers)))
 }
 
-$("#keypad").addEventListener("click", (event) => {
-  const key = (event.target as HTMLElement).closest("button")?.textContent
-  if (!key) return
-  if (key === "⌫") typed = typed.slice(0, -1)
-  else if (key === ",") {
-    if (!typed.includes(",")) typed = (typed || "0") + ","
-  } else {
-    const [, fraction] = typed.split(",")
-    if (fraction !== undefined && fraction.length >= 2) return
-    if (typed.replace(",", "").length >= 9) return
-    typed = typed === "0" ? key : typed + key
-  }
-  renderAmount()
+$("#beers-less").addEventListener("click", () => {
+  beers = Math.max(1, beers - 1)
+  renderBeers()
 })
 
-$("#charge").addEventListener("click", () => void charge())
+$("#beers-more").addEventListener("click", () => {
+  beers = Math.min(MAX_BEERS, beers + 1)
+  renderBeers()
+})
 
-async function charge() {
-  if (!token) return
-  const price = typedValue()
-  if (price === 0n) return
-  const saleTag = BigInt((crypto.getRandomValues(new Uint32Array(1))[0] % 999_999) + 1)
-  const amount = price + saleTag
-  const uri = walletLink(WALLET_URL, { token: token.address, to: merchant, amount, chainId: chain.id })
-  $("#charge-amount").textContent = `${formatAmount(amount, token.decimals)} ${token.symbol}`
-  $("#charge-status").textContent = "À espera do pagamento…"
-  const qr = $("#charge-qr")
-  qr.replaceChildren()
+$("#beers-quick").addEventListener("click", (event) => {
+  const count = Number((event.target as HTMLElement).closest("button")?.textContent)
+  if (!count) return
+  beers = count
+  renderBeers()
+})
+
+$("#choose-coin").addEventListener("click", () => void showCoins())
+$("#coins-back").addEventListener("click", () => show("beers"))
+
+async function showCoins() {
+  $("#coins-beers").textContent = beersLabel(beers)
+  renderCoins()
+  show("coins")
+  if (!coins.length) $("#coins-status").textContent = "A ler as moedas do registo…"
+  $("#coin-list").setAttribute("aria-busy", "true")
+  try {
+    coins = await listedCoins()
+    $("#coins-status").textContent = coins.length ? "" : "Ainda não há moedas no registo."
+    renderCoins()
+  } catch (error) {
+    $("#coins-status").textContent = `Sem ligação ao registo: ${errorText(error).slice(0, 80)}`
+  } finally {
+    $("#coin-list").removeAttribute("aria-busy")
+  }
+}
+
+function renderCoins() {
+  $("#coin-list").replaceChildren(
+    ...coins.map((coin) => {
+      const button = document.createElement("button")
+      button.type = "button"
+      const cell = (className: string, text: string) => {
+        const span = document.createElement("span")
+        span.className = className
+        span.textContent = text
+        return span
+      }
+      button.append(
+        cell("symbol", coin.symbol),
+        cell("total", formatAmount(coin.beerPrice * BigInt(beers), coin.decimals)),
+        cell("name", coin.name),
+        cell("each", `${formatAmount(coin.beerPrice, coin.decimals)} por cerveja`),
+      )
+      button.addEventListener("click", () => void charge(coin))
+      return button
+    }),
+  )
+}
+
+/**
+ * Adds a tag of at most a millionth of a coin, so two sales of the same price never match the same transfer.
+ */
+function saleTag(decimals: number) {
+  const range = 10n ** BigInt(Math.max(0, decimals - 6))
+  return BigInt(crypto.getRandomValues(new Uint32Array(1))[0]) % range
+}
+
+async function charge(coin: ListedCoin) {
+  const count = beers
+  const amount = coin.beerPrice * BigInt(count) + saleTag(coin.decimals)
+  const uri = walletLink(WALLET_URL, { token: coin.address, to: merchant, amount, chainId: chain.id })
+  $("#charge-beers").textContent = beersLabel(count)
+  $("#charge-amount").textContent = `${formatAmount(amount, coin.decimals)} ${coin.symbol}`
+  $("#charge-status").textContent = ""
   const canvas = document.createElement("canvas")
-  qr.append(canvas)
+  $("#charge-qr").replaceChildren(canvas)
   await QRCode.toCanvas(canvas, uri, { margin: 0, width: 600, errorCorrectionLevel: "M" })
   show("charge")
-  stopWatching = watchForPayment(token, amount, (sale) => {
+  stopWatching = watchForPayment(coin.address, amount, (payment) => {
     stopWatching = null
+    const sale: Sale = { ...payment, token: coin.address, symbol: coin.symbol, decimals: coin.decimals, beers: count, amount: amount.toString() }
     recordSale(sale)
-    void showPaid(sale)
+    showConfirmation(sale)
   })
 }
 
-function watchForPayment(info: TokenInfo, amount: bigint, onPaid: (sale: Sale) => void) {
+function watchForPayment(token: Address, amount: bigint, onPaid: (payment: Pick<Sale, "from" | "hash" | "block" | "at">) => void) {
   let active = true
-  let fromBlock: bigint | null = null
+  let firstBlock: bigint | null = null
 
   const poll = async () => {
     if (!active) return
     try {
       const latest = await publicClient.getBlockNumber({ cacheTime: 0 })
-      if (fromBlock === null) fromBlock = latest > 2n ? latest - 2n : 0n
-      if (latest >= fromBlock) {
-        const logs = await publicClient.getLogs({
-          address: info.address,
-          event: transferEvent,
-          fromBlock,
-          toBlock: latest,
-        })
-        const match = logs.find((log) => log.args.to?.toLowerCase() === merchant.toLowerCase() && log.args.value === amount)
-        if (match && active) {
-          active = false
-          onPaid({
-            amount: amount.toString(),
-            from: match.args.from!,
-            hash: match.transactionHash!,
-            block: match.blockNumber!.toString(),
-            at: Date.now(),
-          })
-          return
-        }
-        fromBlock = latest + 1n
+      if (firstBlock === null) firstBlock = latest > 2n ? latest - 2n : 0n
+      const fromBlock = latest - firstBlock > LOG_WINDOW ? latest - LOG_WINDOW : firstBlock
+      const logs = await publicClient.getLogs({ address: token, event: transferEvent, fromBlock, toBlock: latest })
+      const match = logs.find((log) => log.args.to?.toLowerCase() === merchant.toLowerCase() && log.args.value === amount)
+      if (match && active) {
+        active = false
+        onPaid({ from: match.args.from!, hash: match.transactionHash!, block: match.blockNumber!.toString(), at: Date.now() })
+        return
       }
-      $("#charge-status").textContent = "À espera do pagamento…"
+      $("#charge-status").textContent = ""
     } catch (error) {
       $("#charge-status").textContent = `Sem ligação à rede, a tentar de novo (${errorText(error).slice(0, 60)})`
     }
@@ -174,137 +197,200 @@ function watchForPayment(info: TokenInfo, amount: bigint, onPaid: (sale: Sale) =
   }
 }
 
-async function showPaid(sale: Sale) {
-  if (!token) return
-  lastSale = sale
-  const label = `${formatAmount(BigInt(sale.amount), token.decimals)} ${token.symbol}`
-  $("#paid-amount").textContent = label
-  $("#paid-from").textContent = short(sale.from)
-  $("#paid-block").textContent = `#${sale.block}`
-  const receiptUrl = explorerTx(sale.hash)
-  const qr = $("#paid-qr")
-  qr.replaceChildren()
-  const canvas = document.createElement("canvas")
-  qr.append(canvas)
-  await QRCode.toCanvas(canvas, receiptUrl, { margin: 0, width: 400 })
-  $("#receipt-shop").textContent = localStorage.getItem(NAME_KEY) || "Terminal Moeda"
-  $("#receipt-date").textContent = new Date(sale.at).toLocaleString("pt-PT")
-  $("#receipt-amount").textContent = `Total: ${label}`
-  $("#receipt-from").textContent = `De: ${sale.from}`
-  $("#receipt-tx").textContent = `Tx: ${sale.hash}`
-  ;($("#receipt-qr") as HTMLImageElement).src = await QRCode.toDataURL(receiptUrl, { margin: 0, width: 300 })
+function saleTotal(sale: Sale) {
+  return `${formatAmount(BigInt(sale.amount), sale.decimals)} ${sale.symbol}`
+}
+
+function saleNumber(sale: Sale) {
+  return `#${sale.hash.slice(-4).toUpperCase()}`
+}
+
+function saleWhen(sale: Sale) {
+  const at = new Date(sale.at)
+  return `${at.toLocaleDateString("pt-PT")} · ${at.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`
+}
+
+function saleItems(sale: Sale) {
+  return `${sale.beers} × cerveja`
+}
+
+function receiptOf(sale: Sale): Receipt {
+  return {
+    shop: shopName(),
+    date: saleWhen(sale),
+    items: saleItems(sale),
+    total: saleTotal(sale),
+    sale: saleNumber(sale),
+    link: explorerTx(sale.hash),
+  }
+}
+
+function showConfirmation(sale: Sale) {
+  $("#confirm-amount").textContent = saleTotal(sale)
+  $("#confirm-beers").textContent = beersLabel(sale.beers)
+  const overlay = $("#confirm")
+  overlay.hidden = false
   navigator.vibrate?.([80, 60, 160])
+  const ready = showReceipt(sale)
+  let done = false
+  const finish = async () => {
+    if (done) return
+    done = true
+    await ready
+    overlay.hidden = true
+  }
+  overlay.addEventListener("click", () => void finish(), { once: true })
+  setTimeout(() => void finish(), CONFIRM_MS)
+}
+
+async function showReceipt(sale: Sale) {
+  lastSale = sale
+  $("#receipt-shop").textContent = shopName()
+  $("#receipt-date").textContent = saleWhen(sale)
+  $("#receipt-items").textContent = saleItems(sale)
+  $("#receipt-amount").textContent = saleTotal(sale)
+  $("#receipt-total").textContent = saleTotal(sale)
+  $("#receipt-sale").textContent = saleNumber(sale)
+  const canvas = document.createElement("canvas")
+  $("#receipt-qr").replaceChildren(canvas)
+  await QRCode.toCanvas(canvas, explorerTx(sale.hash), { margin: 0, width: 400 })
   show("paid")
 }
 
 $("#charge-cancel").addEventListener("click", () => {
   stopWatching?.()
   stopWatching = null
-  showKeypad()
+  show("coins")
 })
 
-$("#new-sale").addEventListener("click", showKeypad)
+$("#new-sale").addEventListener("click", showBeers)
+
 $("#print").addEventListener("click", () => {
-  if (lastSale) window.print()
+  if (!lastSale) return
+  if (!isAndroid()) {
+    window.print()
+    return
+  }
+  const link = document.createElement("a")
+  link.href = rawbtLink(receiptOf(lastSale))
+  link.target = "_blank"
+  link.rel = "noopener"
+  link.click()
 })
+
+function totalsBySymbol(list: Sale[]) {
+  const totals = new Map<string, { value: bigint; decimals: number }>()
+  for (const sale of list) {
+    const total = totals.get(sale.symbol) ?? { value: 0n, decimals: sale.decimals }
+    total.value += BigInt(sale.amount)
+    totals.set(sale.symbol, total)
+  }
+  return [...totals].map(([symbol, total]) => `${formatAmount(total.value, total.decimals)} ${symbol}`).join(" · ")
+}
 
 $("#open-history").addEventListener("click", () => void openHistory())
-$("#history-back").addEventListener("click", showKeypad)
+$("#history-back").addEventListener("click", showBeers)
 
 async function openHistory() {
-  if (!token) return
-  const info = token
   const list = sales()
-  const today = new Date().toDateString()
-  const total = list.filter((s) => new Date(s.at).toDateString() === today).reduce((sum, s) => sum + BigInt(s.amount), 0n)
-  $("#history-total").textContent = `${formatAmount(total, info.decimals)} ${info.symbol}`
+  const today = list.filter((sale) => new Date(sale.at).toDateString() === new Date().toDateString())
+  $("#history-total").textContent = totalsBySymbol(today) || "0"
+  $("#history-beers").textContent = String(today.reduce((sum, sale) => sum + sale.beers, 0))
   $("#history-balance").textContent = "…"
+  ;($("#history-balance") as HTMLAnchorElement).href = explorerAddress(merchant)
   $("#history-list").replaceChildren(
-    ...list.map((s) => {
+    ...list.map((sale) => {
       const row = document.createElement("a")
       row.className = "item"
-      row.href = explorerTx(s.hash)
+      row.href = explorerTx(sale.hash)
       row.target = "_blank"
       row.rel = "noopener"
-      row.style.color = "inherit"
-      row.style.textDecoration = "none"
-      row.innerHTML = `<span>${new Date(s.at).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })} · ${short(s.from)}</span><span class="green">${formatAmount(BigInt(s.amount), info.decimals)}</span>`
+      const when = document.createElement("span")
+      when.className = "when"
+      when.textContent = `${new Date(sale.at).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })} · ${beersLabel(sale.beers)}`
+      const number = document.createElement("span")
+      number.className = "mono muted"
+      number.textContent = saleNumber(sale)
+      const total = document.createElement("span")
+      total.className = "green"
+      total.textContent = saleTotal(sale)
+      row.append(when, number, total)
       return row
     }),
   )
   show("history")
-  tokenBalance(info.address, merchant)
-    .then((b) => ($("#history-balance").textContent = `${formatAmount(b, info.decimals)} ${info.symbol}`))
-    .catch(() => ($("#history-balance").textContent = "sem ligação"))
+  try {
+    if (!coins.length) coins = await listedCoins()
+    const balances = await Promise.all(coins.map(async (coin) => ({ coin, balance: await tokenBalance(coin.address, merchant) })))
+    $("#history-balance").textContent =
+      balances.map(({ coin, balance }) => `${formatAmount(balance, coin.decimals)} ${coin.symbol}`).join(" · ") || "0"
+  } catch {
+    $("#history-balance").textContent = "sem ligação"
+  }
 }
+
+function addressLink(selector: string, address: string) {
+  const link = $(selector) as HTMLAnchorElement
+  link.textContent = short(address)
+  link.href = explorerAddress(address)
+  link.title = address
+}
+
+let merchantQrDrawn = false
 
 $("#open-settings").addEventListener("click", () => {
   stopWatching?.()
   stopWatching = null
-  $("#settings-address").textContent = merchant
-  $("#settings-token").textContent = token ? `${token.symbol} · ${token.address}` : "nenhuma"
+  $("#confirm").hidden = true
+  ;($("#settings-name") as HTMLInputElement).value = localStorage.getItem(NAME_KEY) ?? ""
+  addressLink("#settings-address", merchant)
+  addressLink("#settings-registry", REGISTRY_ADDRESS)
+  if (!merchantQrDrawn) {
+    merchantQrDrawn = true
+    const canvas = document.createElement("canvas")
+    $("#settings-qr").replaceChildren(canvas)
+    void QRCode.toCanvas(canvas, merchant, { margin: 0, width: 320 })
+  }
+  $("#settings-coins").textContent =
+    coins.map((coin) => `${coin.symbol} ${formatAmount(coin.beerPrice, coin.decimals)}`).join(" · ") || "…"
   show("settings")
 })
 
-$("#settings-back").addEventListener("click", () => (token ? showKeypad() : show("setup")))
+$("#settings-name").addEventListener("change", (event) => {
+  const name = (event.target as HTMLInputElement).value.trim()
+  if (name) localStorage.setItem(NAME_KEY, name)
+  else localStorage.removeItem(NAME_KEY)
+  $("#shop-name").textContent = shopName()
+})
 
-$("#settings-reset").addEventListener("click", () => {
-  localStorage.removeItem(TOKEN_KEY)
-  token = null
-  ;($("#setup-token") as HTMLInputElement).value = ""
-  show("setup")
+$("#settings-back").addEventListener("click", showBeers)
+$("#settings-copy").addEventListener("click", () => void copy(merchant))
+$("#registry-copy").addEventListener("click", () => void copy(REGISTRY_ADDRESS))
+
+$("#withdraw-to").addEventListener("input", (event) => {
+  const to = decodeAddress((event.target as HTMLInputElement).value)
+  const button = $("#withdraw") as HTMLButtonElement
+  button.textContent = to ? `Enviar tudo para ${short(to)}` : "Enviar tudo"
+  button.disabled = !to
 })
 
 $("#withdraw").addEventListener("click", async () => {
-  if (!token) return
   const to = decodeAddress(($("#withdraw-to") as HTMLInputElement).value)
   if (!to) return toast("Endereço inválido")
   try {
-    const balance = await tokenBalance(token.address, merchant)
-    if (balance === 0n) return toast("Sem saldo para levantar")
-    const hash = await wallet.writeContract({ address: token.address, abi: moedaAbi, functionName: "transfer", args: [to, balance] })
-    toast("Enviado, à espera da rede…")
-    await publicClient.waitForTransactionReceipt({ hash })
-    toast("Saldo levantado")
+    if (!coins.length) coins = await listedCoins()
+    let sent = 0
+    for (const coin of coins) {
+      const balance = await tokenBalance(coin.address, merchant)
+      if (balance === 0n) continue
+      const hash = await wallet.writeContract({ address: coin.address, abi: moedaAbi, functionName: "transfer", args: [to, balance] })
+      toast(`${coin.symbol} enviado, à espera da rede…`)
+      await publicClient.waitForTransactionReceipt({ hash })
+      sent++
+    }
+    toast(sent ? "Saldo levantado" : "Sem saldo para levantar")
   } catch (error) {
     toast(errorText(error))
-  }
-})
-
-$("#setup-save").addEventListener("click", async () => {
-  const input = ($("#setup-token") as HTMLInputElement).value
-  const address = decodeAddress(input)
-  if (!address) {
-    $("#setup-error").textContent = "Isso não parece um endereço 0x…"
-    return
-  }
-  const name = ($("#setup-name") as HTMLInputElement).value.trim()
-  if (name) localStorage.setItem(NAME_KEY, name)
-  localStorage.setItem(TOKEN_KEY, address)
-  $("#setup-error").textContent = "A ler a moeda…"
-  await boot()
-})
-
-$("#setup-scan").addEventListener("click", async () => {
-  const box = $("#setup-scanner")
-  if (setupScanner) {
-    setupScanner.stop()
-    setupScanner = null
-    box.hidden = true
-    return
-  }
-  box.hidden = false
-  try {
-    setupScanner = await startScanner(box.querySelector("video")!, (text) => {
-      setupScanner = null
-      box.hidden = true
-      const address = decodeAddress(text.replace(/^.*[?&]token=/, ""))
-      if (address) ($("#setup-token") as HTMLInputElement).value = address
-      else $("#setup-error").textContent = "Esse QR não tem uma moeda"
-    })
-  } catch (error) {
-    box.hidden = true
-    $("#setup-error").textContent = `Sem câmara: ${errorText(error)}`
   }
 })
 
@@ -320,5 +406,10 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") void keepScreenOn()
 })
 
+readShopFromUrl()
+$("#shop-name").textContent = shopName()
+showBeers()
 void keepScreenOn()
-void boot()
+void listedCoins()
+  .then((listed) => (coins = listed))
+  .catch(() => undefined)
