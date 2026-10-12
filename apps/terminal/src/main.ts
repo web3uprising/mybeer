@@ -7,7 +7,7 @@ import { decodeAddress, walletLink } from "../../shared/src/lib/pay-uri"
 import { listedCoins, REGISTRY_ADDRESS, type ListedCoin } from "../../shared/src/lib/registry"
 import { formatAmount, tokenBalance } from "../../shared/src/lib/tokens"
 import { chain, explorerAddress, explorerTx, publicClient, walletFor } from "../../shared/src/lib/wallet"
-import { isAndroid, rawbtLink, type Receipt } from "./receipt"
+import { isAndroid, printLink, type Receipt } from "./receipt"
 
 const NAME_KEY = "moeda/terminal/name"
 const SALES_KEY = "moeda/terminal/sales"
@@ -272,7 +272,7 @@ $("#print").addEventListener("click", () => {
     return
   }
   const link = document.createElement("a")
-  link.href = rawbtLink(receiptOf(lastSale))
+  link.href = printLink(receiptOf(lastSale))
   link.target = "_blank"
   link.rel = "noopener"
   link.click()
