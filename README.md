@@ -43,6 +43,17 @@ adicionou, ou o dono do registo, muda o preço ou a retira.
 REGISTRY_ADDRESS=0xe7d7… COIN_ADDRESS=0x… BEER_PRICE=2 npm run add-coin -w evm
 ```
 
+## Imprimir no SUNMI
+
+O Chrome dentro do dot.li não chega à impressora do SUNMI, por isso o botão Imprimir abre uma
+ligação `mybeer-print:` que a app em `android/print-bridge` recebe e entrega ao serviço de
+impressão do SUNMI. Compila e instala uma vez por terminal, com o SDK do Android:
+
+```sh
+android/print-bridge/build.sh
+adb install -r android/print-bridge/build/print-bridge.apk
+```
+
 ## Publicar num domínio .dot
 
 O gateway dot.li corre a app numa moldura e serve sempre o `index.html`. Uma app que recarrega
