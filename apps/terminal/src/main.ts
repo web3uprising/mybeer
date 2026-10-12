@@ -2,7 +2,7 @@ import QRCode from "qrcode"
 import { parseAbiItem, type Address, type Hash } from "viem"
 import { moedaAbi } from "../../shared/src/generated/moeda"
 import { WALLET_URL } from "../../shared/src/links"
-import { $, errorText, short, show, toast } from "../../shared/src/lib/dom"
+import { $, errorText, show, toast } from "../../shared/src/lib/dom"
 import { decodeAddress, walletLink } from "../../shared/src/lib/pay-uri"
 import { listedCoins, REGISTRY_ADDRESS, type ListedCoin } from "../../shared/src/lib/registry"
 import { formatAmount, tokenBalance } from "../../shared/src/lib/tokens"
@@ -151,7 +151,7 @@ async function charge(coin: ListedCoin) {
   const uri = walletLink(WALLET_URL, { token: coin.address, to: merchant, amount, chainId: chain.id })
   $("#charge-beers").textContent = beersLabel(count)
   $("#charge-amount").textContent = `${formatAmount(amount, coin.decimals)} ${coin.symbol}`
-  $("#charge-status").textContent = "À espera do pagamento…"
+  $("#charge-status").textContent = ""
   const canvas = document.createElement("canvas")
   $("#charge-qr").replaceChildren(canvas)
   await QRCode.toCanvas(canvas, uri, { margin: 0, width: 600, errorCorrectionLevel: "M" })
@@ -181,7 +181,7 @@ function watchForPayment(token: Address, amount: bigint, onPaid: (payment: Pick<
         onPaid({ from: match.args.from!, hash: match.transactionHash!, block: match.blockNumber!.toString(), at: Date.now() })
         return
       }
-      $("#charge-status").textContent = "À espera do pagamento…"
+      $("#charge-status").textContent = ""
     } catch (error) {
       $("#charge-status").textContent = `Sem ligação à rede, a tentar de novo (${errorText(error).slice(0, 60)})`
     }
@@ -199,10 +199,8 @@ function saleTotal(sale: Sale) {
 
 async function showPaid(sale: Sale) {
   lastSale = sale
-  $("#paid-beers").textContent = String(sale.beers)
   $("#paid-amount").textContent = saleTotal(sale)
-  $("#paid-from").textContent = short(sale.from)
-  $("#paid-block").textContent = `#${sale.block}`
+  $("#paid-beers").textContent = beersLabel(sale.beers)
   const receiptUrl = explorerTx(sale.hash)
   const canvas = document.createElement("canvas")
   $("#paid-qr").replaceChildren(canvas)
@@ -211,7 +209,6 @@ async function showPaid(sale: Sale) {
   $("#receipt-date").textContent = new Date(sale.at).toLocaleString("pt-PT")
   $("#receipt-items").textContent = `${sale.beers} x cerveja`
   $("#receipt-amount").textContent = `Total: ${saleTotal(sale)}`
-  $("#receipt-from").textContent = `De: ${sale.from}`
   $("#receipt-tx").textContent = `Tx: ${sale.hash}`
   ;($("#receipt-qr") as HTMLImageElement).src = await QRCode.toDataURL(receiptUrl, { margin: 0, width: 300 })
   navigator.vibrate?.([80, 60, 160])
@@ -238,7 +235,6 @@ $("#print").addEventListener("click", () => {
     date: new Date(lastSale.at).toLocaleString("pt-PT"),
     items: `${lastSale.beers} x cerveja`,
     total: saleTotal(lastSale),
-    from: lastSale.from,
     tx: lastSale.hash,
     link: explorerTx(lastSale.hash),
   })

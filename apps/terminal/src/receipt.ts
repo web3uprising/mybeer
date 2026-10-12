@@ -6,7 +6,6 @@ export interface Receipt {
   date: string
   items: string
   total: string
-  from: string
   tx: string
   link: string
 }
@@ -85,11 +84,10 @@ export function receiptEscPos(receipt: Receipt): string {
     .bold(false)
     .text("--------------------------------")
     .align("left")
-    .text(`De: ${receipt.from}`)
     .text(`Tx: ${receipt.tx}`)
     .align("center")
     .qr(receipt.link)
-    .text("Recibo verificavel na cadeia")
+    .text("Recibo")
     .text("Obrigado!")
     .feed(4)
     .base64()

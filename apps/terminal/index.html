@@ -48,29 +48,24 @@
         <span class="big green" id="charge-amount"></span>
       </div>
       <div class="qr" id="charge-qr"></div>
-      <div class="status"><span class="dot"></span><span id="charge-status">À espera do pagamento…</span></div>
-      <p class="muted">Aponta a câmara do telemóvel para o código, ou usa Pagar na carteira.</p>
+      <p class="muted" id="charge-status"></p>
       <button class="secondary push" id="charge-cancel" type="button">Cancelar</button>
     </section>
 
     <section data-screen="paid" hidden>
-      <div class="no-print stack">
+      <div class="no-print paid">
+        <span class="check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
         <span class="success-mark">Pago</span>
-        <div class="card">
-          <div class="row"><span class="label">Cervejas</span><span class="value" id="paid-beers"></span></div>
-          <div class="row"><span class="label">Valor</span><span class="value green" id="paid-amount"></span></div>
-          <div class="row"><span class="label">De</span><span class="value" id="paid-from"></span></div>
-          <div class="row"><span class="label">Bloco</span><span class="value" id="paid-block"></span></div>
-        </div>
-        <p class="muted">Recibo verificável na cadeia:</p>
-        <div class="qr" id="paid-qr" style="width:min(100%,220px)"></div>
+        <span class="big green" id="paid-amount"></span>
+        <span class="muted" id="paid-beers"></span>
+        <div class="qr" id="paid-qr"></div>
+        <span class="label">Recibo</span>
       </div>
       <div class="receipt" hidden style="flex-direction:column;gap:4px">
         <strong id="receipt-shop"></strong>
         <span id="receipt-date"></span>
         <span id="receipt-items"></span>
         <span id="receipt-amount"></span>
-        <span id="receipt-from"></span>
         <span id="receipt-tx" style="word-break:break-all"></span>
         <img id="receipt-qr" alt="" style="width:40mm;height:40mm">
       </div>
