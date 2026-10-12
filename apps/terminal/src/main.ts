@@ -2,11 +2,11 @@ import QRCode from "qrcode"
 import { parseAbiItem, type Address, type Hash } from "viem"
 import { moedaAbi } from "../../shared/src/generated/moeda"
 import { WALLET_URL } from "../../shared/src/links"
-import { $, errorText, show, toast } from "../../shared/src/lib/dom"
+import { $, copy, errorText, short, show, toast } from "../../shared/src/lib/dom"
 import { decodeAddress, walletLink } from "../../shared/src/lib/pay-uri"
 import { listedCoins, REGISTRY_ADDRESS, type ListedCoin } from "../../shared/src/lib/registry"
 import { formatAmount, tokenBalance } from "../../shared/src/lib/tokens"
-import { chain, explorerTx, publicClient, walletFor } from "../../shared/src/lib/wallet"
+import { chain, explorerAddress, explorerTx, publicClient, walletFor } from "../../shared/src/lib/wallet"
 import { isAndroid, rawbtLink, type Receipt } from "./receipt"
 
 const NAME_KEY = "moeda/terminal/name"
@@ -106,12 +106,15 @@ async function showCoins() {
   renderCoins()
   show("coins")
   if (!coins.length) $("#coins-status").textContent = "A ler as moedas do registo…"
+  $("#coin-list").setAttribute("aria-busy", "true")
   try {
     coins = await listedCoins()
     $("#coins-status").textContent = coins.length ? "" : "Ainda não há moedas no registo."
     renderCoins()
   } catch (error) {
     $("#coins-status").textContent = `Sem ligação ao registo: ${errorText(error).slice(0, 80)}`
+  } finally {
+    $("#coin-list").removeAttribute("aria-busy")
   }
 }
 
@@ -294,6 +297,7 @@ async function openHistory() {
   $("#history-total").textContent = totalsBySymbol(today) || "0"
   $("#history-beers").textContent = String(today.reduce((sum, sale) => sum + sale.beers, 0))
   $("#history-balance").textContent = "…"
+  ;($("#history-balance") as HTMLAnchorElement).href = explorerAddress(merchant)
   $("#history-list").replaceChildren(
     ...list.map((sale) => {
       const row = document.createElement("a")
@@ -301,14 +305,16 @@ async function openHistory() {
       row.href = explorerTx(sale.hash)
       row.target = "_blank"
       row.rel = "noopener"
-      row.style.color = "inherit"
-      row.style.textDecoration = "none"
       const when = document.createElement("span")
+      when.className = "when"
       when.textContent = `${new Date(sale.at).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })} · ${beersLabel(sale.beers)}`
+      const number = document.createElement("span")
+      number.className = "mono muted"
+      number.textContent = saleNumber(sale)
       const total = document.createElement("span")
       total.className = "green"
       total.textContent = saleTotal(sale)
-      row.append(when, total)
+      row.append(when, number, total)
       return row
     }),
   )
@@ -323,12 +329,28 @@ async function openHistory() {
   }
 }
 
+function addressLink(selector: string, address: string) {
+  const link = $(selector) as HTMLAnchorElement
+  link.textContent = short(address)
+  link.href = explorerAddress(address)
+  link.title = address
+}
+
+let merchantQrDrawn = false
+
 $("#open-settings").addEventListener("click", () => {
   stopWatching?.()
   stopWatching = null
+  $("#confirm").hidden = true
   ;($("#settings-name") as HTMLInputElement).value = localStorage.getItem(NAME_KEY) ?? ""
-  $("#settings-address").textContent = merchant
-  $("#settings-registry").textContent = REGISTRY_ADDRESS
+  addressLink("#settings-address", merchant)
+  addressLink("#settings-registry", REGISTRY_ADDRESS)
+  if (!merchantQrDrawn) {
+    merchantQrDrawn = true
+    const canvas = document.createElement("canvas")
+    $("#settings-qr").replaceChildren(canvas)
+    void QRCode.toCanvas(canvas, merchant, { margin: 0, width: 320 })
+  }
   $("#settings-coins").textContent =
     coins.map((coin) => `${coin.symbol} ${formatAmount(coin.beerPrice, coin.decimals)}`).join(" · ") || "…"
   show("settings")
@@ -342,6 +364,15 @@ $("#settings-name").addEventListener("change", (event) => {
 })
 
 $("#settings-back").addEventListener("click", showBeers)
+$("#settings-copy").addEventListener("click", () => void copy(merchant))
+$("#registry-copy").addEventListener("click", () => void copy(REGISTRY_ADDRESS))
+
+$("#withdraw-to").addEventListener("input", (event) => {
+  const to = decodeAddress((event.target as HTMLInputElement).value)
+  const button = $("#withdraw") as HTMLButtonElement
+  button.textContent = to ? `Enviar tudo para ${short(to)}` : "Enviar tudo"
+  button.disabled = !to
+})
 
 $("#withdraw").addEventListener("click", async () => {
   const to = decodeAddress(($("#withdraw-to") as HTMLInputElement).value)

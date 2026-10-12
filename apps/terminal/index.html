@@ -36,15 +36,15 @@
 
     <section data-screen="coins" hidden>
       <h2>Pagar <em>com</em></h2>
-      <p class="muted" id="coins-beers"></p>
+      <p class="eyebrow" id="coins-beers"></p>
       <div class="coin-list" id="coin-list"></div>
       <p class="muted" id="coins-status"></p>
       <button class="secondary push" id="coins-back" type="button">Voltar</button>
     </section>
 
     <section data-screen="charge" hidden>
-      <div class="row">
-        <span class="label" id="charge-beers"></span>
+      <div class="charge-head">
+        <p class="eyebrow" id="charge-beers"></p>
         <span class="big green" id="charge-amount"></span>
       </div>
       <div class="qr" id="charge-qr"></div>
@@ -76,7 +76,7 @@
         <div class="row"><span class="label">Total hoje</span><span class="value green" id="history-total"></span></div>
         <div class="row"><span class="label">Cervejas hoje</span><span class="value" id="history-beers"></span></div>
         <span class="label">Saldo do terminal</span>
-        <span class="value" id="history-balance"></span>
+        <a class="value link" id="history-balance" target="_blank" rel="noopener"></a>
       </div>
       <div class="log" id="history-list"></div>
       <button class="secondary push" id="history-back" type="button">Voltar</button>
@@ -90,17 +90,26 @@
       </label>
       <div class="card">
         <span class="label">Endereço que recebe</span>
-        <span class="value" id="settings-address"></span>
-        <span class="label">Registo de moedas</span>
-        <span class="value" id="settings-registry"></span>
+        <div class="qr small" id="settings-qr"></div>
+        <div class="row">
+          <a class="value mono link" id="settings-address" target="_blank" rel="noopener"></a>
+          <button class="chip" id="settings-copy" type="button">Copiar</button>
+        </div>
         <span class="label">Moedas aceites</span>
         <span class="value" id="settings-coins"></span>
       </div>
       <details>
+        <summary>Registo de moedas</summary>
+        <div class="row" style="margin-top:10px">
+          <a class="value mono link" id="settings-registry" target="_blank" rel="noopener"></a>
+          <button class="chip" id="registry-copy" type="button">Copiar</button>
+        </div>
+      </details>
+      <details>
         <summary>Levantar saldo para outra carteira</summary>
         <div class="stack" style="margin-top:10px">
           <input id="withdraw-to" placeholder="0x… destino" autocomplete="off" spellcheck="false">
-          <button class="secondary" id="withdraw" type="button">Enviar tudo</button>
+          <button class="secondary" id="withdraw" type="button" disabled>Enviar tudo</button>
           <p class="muted">Precisa de um pouco de PAS no terminal para pagar a rede.</p>
         </div>
       </details>

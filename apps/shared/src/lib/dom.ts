@@ -23,6 +23,15 @@ export function toast(message: string) {
   setTimeout(() => el.remove(), 2600)
 }
 
+export async function copy(value: string) {
+  try {
+    await navigator.clipboard.writeText(value)
+    toast("Copiado")
+  } catch {
+    toast(value)
+  }
+}
+
 export function errorText(error: unknown) {
   const e = error as { shortMessage?: string; details?: string; message?: string }
   return e.shortMessage ?? e.details ?? e.message ?? String(error)
