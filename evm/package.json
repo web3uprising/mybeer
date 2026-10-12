@@ -5,7 +5,9 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy.ts --network polkadotHubTestnet",
-    "export-abi": "hardhat compile && tsx scripts/export-abi.ts"
+    "export-abi": "hardhat compile && tsx scripts/export-abi.ts",
+    "deploy-registry": "hardhat run scripts/deploy-registry.ts --network polkadotHubTestnet",
+    "add-coin": "hardhat run scripts/add-coin.ts --network polkadotHubTestnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",

@@ -16,49 +16,35 @@
       <button id="open-settings" type="button">definições</button>
     </header>
 
-    <section data-screen="setup" hidden>
+    <section data-screen="beers" hidden>
       <p class="eyebrow">mybeer · terminal</p>
-      <h1>Ligar o <em>terminal</em></h1>
-      <p class="muted">Que moeda aceita esta loja?</p>
-      <label class="field">
-        <span class="label">Endereço da moeda</span>
-        <input id="setup-token" placeholder="0x…" autocomplete="off" spellcheck="false">
-      </label>
-      <label class="field">
-        <span class="label">Nome da loja</span>
-        <input id="setup-name" placeholder="Bar da AEFEUP" autocomplete="off">
-      </label>
-      <p class="muted" id="setup-error"></p>
-      <div class="stack push">
-        <button class="secondary" id="setup-scan" type="button">Ler QR da moeda</button>
-        <button class="primary" id="setup-save" type="button">Guardar</button>
+      <h1>Quantas <em>cervejas</em>?</h1>
+      <div class="beer-count">
+        <button class="round" id="beers-less" type="button" aria-label="Menos uma">−</button>
+        <span class="big" id="beers">1</span>
+        <button class="round" id="beers-more" type="button" aria-label="Mais uma">+</button>
       </div>
-      <div class="scanner" id="setup-scanner" hidden><video></video></div>
-    </section>
-
-    <section data-screen="keypad" hidden>
-      <div class="row">
-        <span class="label">Moeda</span>
-        <span class="value amber" id="token-symbol">…</span>
-      </div>
-      <div class="amount-display">
-        <span class="big" id="amount">0</span>
-      </div>
-      <div class="keypad" id="keypad">
+      <div class="quick" id="beers-quick">
         <button type="button">1</button><button type="button">2</button><button type="button">3</button>
         <button type="button">4</button><button type="button">5</button><button type="button">6</button>
-        <button type="button">7</button><button type="button">8</button><button type="button">9</button>
-        <button type="button">,</button><button type="button">0</button><button type="button" aria-label="Apagar">⌫</button>
       </div>
       <div class="actions push">
         <button class="secondary" id="open-history" type="button">Vendas</button>
-        <button class="primary" id="charge" type="button" disabled>Cobrar</button>
+        <button class="primary" id="choose-coin" type="button">Escolher moeda</button>
       </div>
+    </section>
+
+    <section data-screen="coins" hidden>
+      <h2>Pagar <em>com</em></h2>
+      <p class="muted" id="coins-beers"></p>
+      <div class="coin-list" id="coin-list"></div>
+      <p class="muted" id="coins-status"></p>
+      <button class="secondary push" id="coins-back" type="button">Voltar</button>
     </section>
 
     <section data-screen="charge" hidden>
       <div class="row">
-        <span class="label">A cobrar</span>
+        <span class="label" id="charge-beers"></span>
         <span class="big green" id="charge-amount"></span>
       </div>
       <div class="qr" id="charge-qr"></div>
@@ -71,6 +57,7 @@
       <div class="no-print stack">
         <span class="success-mark">Pago</span>
         <div class="card">
+          <div class="row"><span class="label">Cervejas</span><span class="value" id="paid-beers"></span></div>
           <div class="row"><span class="label">Valor</span><span class="value green" id="paid-amount"></span></div>
           <div class="row"><span class="label">De</span><span class="value" id="paid-from"></span></div>
           <div class="row"><span class="label">Bloco</span><span class="value" id="paid-block"></span></div>
@@ -81,6 +68,7 @@
       <div class="receipt" hidden style="flex-direction:column;gap:4px">
         <strong id="receipt-shop"></strong>
         <span id="receipt-date"></span>
+        <span id="receipt-items"></span>
         <span id="receipt-amount"></span>
         <span id="receipt-from"></span>
         <span id="receipt-tx" style="word-break:break-all"></span>
@@ -96,7 +84,9 @@
       <h2><em>Vendas</em></h2>
       <div class="card">
         <div class="row"><span class="label">Total hoje</span><span class="value green" id="history-total"></span></div>
-        <div class="row"><span class="label">Saldo do terminal</span><span class="value" id="history-balance"></span></div>
+        <div class="row"><span class="label">Cervejas hoje</span><span class="value" id="history-beers"></span></div>
+        <span class="label">Saldo do terminal</span>
+        <span class="value" id="history-balance"></span>
       </div>
       <div class="log" id="history-list"></div>
       <button class="secondary push" id="history-back" type="button">Voltar</button>
@@ -104,11 +94,17 @@
 
     <section data-screen="settings" hidden>
       <h2><em>Definições</em></h2>
+      <label class="field">
+        <span class="label">Nome da loja</span>
+        <input id="settings-name" placeholder="Bar da AEFEUP" autocomplete="off">
+      </label>
       <div class="card">
         <span class="label">Endereço que recebe</span>
         <span class="value" id="settings-address"></span>
-        <span class="label">Moeda</span>
-        <span class="value" id="settings-token"></span>
+        <span class="label">Registo de moedas</span>
+        <span class="value" id="settings-registry"></span>
+        <span class="label">Moedas aceites</span>
+        <span class="value" id="settings-coins"></span>
       </div>
       <details>
         <summary>Levantar saldo para outra carteira</summary>
@@ -118,10 +114,7 @@
           <p class="muted">Precisa de um pouco de PAS no terminal para pagar a rede.</p>
         </div>
       </details>
-      <div class="stack push">
-        <button class="secondary" id="settings-reset" type="button">Trocar de moeda</button>
-        <button class="primary" id="settings-back" type="button">Voltar</button>
-      </div>
+      <button class="primary push" id="settings-back" type="button">Voltar</button>
     </section>
   </main>
   <script type="module" src="/src/main.ts"></script>

@@ -4,6 +4,7 @@ const GS = 0x1d
 export interface Receipt {
   shop: string
   date: string
+  items: string
   total: string
   from: string
   tx: string
@@ -76,6 +77,7 @@ export function receiptEscPos(receipt: Receipt): string {
     .bold(false)
     .text(receipt.date)
     .text("--------------------------------")
+    .text(receipt.items)
     .bold(true)
     .big(true)
     .text(receipt.total)

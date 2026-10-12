@@ -1,5 +1,6 @@
 import hre from "hardhat"
-import { defineChain, parseUnits } from "viem"
+import { parseUnits } from "viem"
+import { explorer, polkadotHubTestnet } from "./network"
 
 const name = process.env.COIN_NAME ?? "Fino"
 const symbol = process.env.COIN_SYMBOL ?? "FINO"
@@ -8,13 +9,6 @@ const maxSupply = parseUnits(process.env.COIN_MAX ?? "2000000", 18)
 const inflationBps = BigInt(process.env.COIN_INFLATION_BPS ?? "500")
 const feeBps = BigInt(process.env.COIN_FEE_BPS ?? "100")
 
-const polkadotHubTestnet = defineChain({
-  id: 420420417,
-  name: "Polkadot Hub TestNet",
-  nativeCurrency: { name: "Paseo", symbol: "PAS", decimals: 18 },
-  rpcUrls: { default: { http: [process.env.RPC_URL ?? "https://eth-rpc-testnet.polkadot.io/"] } },
-})
-
 async function main() {
   const publicClient = await hre.viem.getPublicClient({ chain: polkadotHubTestnet })
   const [wallet] = await hre.viem.getWalletClients({ chain: polkadotHubTestnet })
@@ -22,7 +16,7 @@ async function main() {
     client: { public: publicClient, wallet },
   })
   console.log(`${symbol} deployed at ${moeda.address}`)
-  console.log(`https://blockscout-testnet.polkadot.io/address/${moeda.address}`)
+  console.log(`${explorer}/address/${moeda.address}`)
 }
 
 main().catch(error => {
