@@ -276,6 +276,20 @@ input::placeholder { color: var(--gray-400); }
 
 details summary { cursor: pointer; color: var(--fuchsia-950); font-size: 14px; font-weight: 600; }
 
+@media (max-height: 720px) {
+  .app { gap: 12px; padding: 12px 16px 16px; }
+  [data-screen] { gap: 12px; }
+  .bar { padding-bottom: 8px; }
+  h1 { font-size: 38px; }
+  .amount-display { min-height: 84px; padding: 12px 20px; border-radius: 20px; }
+  .amount-display .big { font-size: 52px; }
+  .keypad { gap: 8px; }
+  .keypad button { padding: 11px 0; border-radius: 14px; font-size: 26px; }
+  button.primary, button.secondary { padding: 14px 16px; font-size: 17px; }
+  .qr { width: min(100%, 300px); padding: 12px; }
+  .success-mark { font-size: 52px; }
+}
+
 @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
 
 @media print {

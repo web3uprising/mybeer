@@ -1,4 +1,5 @@
 import QRCode from "qrcode"
+import { isAndroid, rawbtLink } from "./receipt"
 import { WALLET_URL } from "../../shared/src/links"
 import { getAddress, isAddress, parseAbiItem, type Address, type Hash } from "viem"
 import { moedaAbi } from "../../shared/src/generated/moeda"
@@ -205,7 +206,23 @@ $("#charge-cancel").addEventListener("click", () => {
 
 $("#new-sale").addEventListener("click", showKeypad)
 $("#print").addEventListener("click", () => {
-  if (lastSale) window.print()
+  if (!lastSale || !token) return
+  if (!isAndroid()) {
+    window.print()
+    return
+  }
+  const link = document.createElement("a")
+  link.href = rawbtLink({
+    shop: localStorage.getItem(NAME_KEY) || "Terminal Moeda",
+    date: new Date(lastSale.at).toLocaleString("pt-PT"),
+    total: `${formatAmount(BigInt(lastSale.amount), token.decimals)} ${token.symbol}`,
+    from: lastSale.from,
+    tx: lastSale.hash,
+    link: explorerTx(lastSale.hash),
+  })
+  link.target = "_blank"
+  link.rel = "noopener"
+  link.click()
 })
 
 $("#open-history").addEventListener("click", () => void openHistory())
