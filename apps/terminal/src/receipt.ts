@@ -6,7 +6,7 @@ export interface Receipt {
   date: string
   items: string
   total: string
-  tx: string
+  sale: string
   link: string
 }
 
@@ -16,6 +16,8 @@ function ascii(text: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[·•]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/×/g, "x")
     .replace(/[^\x20-\x7e]/g, "?")
 }
 
@@ -83,9 +85,7 @@ export function receiptEscPos(receipt: Receipt): string {
     .big(false)
     .bold(false)
     .text("--------------------------------")
-    .align("left")
-    .text(`Tx: ${receipt.tx}`)
-    .align("center")
+    .text(`Venda ${receipt.sale}`)
     .qr(receipt.link)
     .text("Recibo")
     .text("Obrigado!")

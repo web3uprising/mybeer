@@ -7,11 +7,12 @@ import { decodeAddress, walletLink } from "../../shared/src/lib/pay-uri"
 import { listedCoins, REGISTRY_ADDRESS, type ListedCoin } from "../../shared/src/lib/registry"
 import { formatAmount, tokenBalance } from "../../shared/src/lib/tokens"
 import { chain, explorerTx, publicClient, walletFor } from "../../shared/src/lib/wallet"
-import { isAndroid, rawbtLink } from "./receipt"
+import { isAndroid, rawbtLink, type Receipt } from "./receipt"
 
 const NAME_KEY = "moeda/terminal/name"
 const SALES_KEY = "moeda/terminal/sales"
 const MAX_BEERS = 20
+const CONFIRM_MS = 1_600
 /** The Hub RPC can report a block before its logs are queryable, so every poll looks back over the whole sale instead of only new blocks. */
 const LOG_WINDOW = 300n
 
@@ -160,7 +161,7 @@ async function charge(coin: ListedCoin) {
     stopWatching = null
     const sale: Sale = { ...payment, token: coin.address, symbol: coin.symbol, decimals: coin.decimals, beers: count, amount: amount.toString() }
     recordSale(sale)
-    void showPaid(sale)
+    showConfirmation(sale)
   })
 }
 
@@ -197,21 +198,59 @@ function saleTotal(sale: Sale) {
   return `${formatAmount(BigInt(sale.amount), sale.decimals)} ${sale.symbol}`
 }
 
-async function showPaid(sale: Sale) {
-  lastSale = sale
-  $("#paid-amount").textContent = saleTotal(sale)
-  $("#paid-beers").textContent = beersLabel(sale.beers)
-  const receiptUrl = explorerTx(sale.hash)
-  const canvas = document.createElement("canvas")
-  $("#paid-qr").replaceChildren(canvas)
-  await QRCode.toCanvas(canvas, receiptUrl, { margin: 0, width: 400 })
-  $("#receipt-shop").textContent = shopName()
-  $("#receipt-date").textContent = new Date(sale.at).toLocaleString("pt-PT")
-  $("#receipt-items").textContent = `${sale.beers} x cerveja`
-  $("#receipt-amount").textContent = `Total: ${saleTotal(sale)}`
-  $("#receipt-tx").textContent = `Tx: ${sale.hash}`
-  ;($("#receipt-qr") as HTMLImageElement).src = await QRCode.toDataURL(receiptUrl, { margin: 0, width: 300 })
+function saleNumber(sale: Sale) {
+  return `#${sale.hash.slice(-4).toUpperCase()}`
+}
+
+function saleWhen(sale: Sale) {
+  const at = new Date(sale.at)
+  return `${at.toLocaleDateString("pt-PT")} · ${at.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`
+}
+
+function saleItems(sale: Sale) {
+  return `${sale.beers} × cerveja`
+}
+
+function receiptOf(sale: Sale): Receipt {
+  return {
+    shop: shopName(),
+    date: saleWhen(sale),
+    items: saleItems(sale),
+    total: saleTotal(sale),
+    sale: saleNumber(sale),
+    link: explorerTx(sale.hash),
+  }
+}
+
+function showConfirmation(sale: Sale) {
+  $("#confirm-amount").textContent = saleTotal(sale)
+  $("#confirm-beers").textContent = beersLabel(sale.beers)
+  const overlay = $("#confirm")
+  overlay.hidden = false
   navigator.vibrate?.([80, 60, 160])
+  const ready = showReceipt(sale)
+  let done = false
+  const finish = async () => {
+    if (done) return
+    done = true
+    await ready
+    overlay.hidden = true
+  }
+  overlay.addEventListener("click", () => void finish(), { once: true })
+  setTimeout(() => void finish(), CONFIRM_MS)
+}
+
+async function showReceipt(sale: Sale) {
+  lastSale = sale
+  $("#receipt-shop").textContent = shopName()
+  $("#receipt-date").textContent = saleWhen(sale)
+  $("#receipt-items").textContent = saleItems(sale)
+  $("#receipt-amount").textContent = saleTotal(sale)
+  $("#receipt-total").textContent = saleTotal(sale)
+  $("#receipt-sale").textContent = saleNumber(sale)
+  const canvas = document.createElement("canvas")
+  $("#receipt-qr").replaceChildren(canvas)
+  await QRCode.toCanvas(canvas, explorerTx(sale.hash), { margin: 0, width: 400 })
   show("paid")
 }
 
@@ -230,14 +269,7 @@ $("#print").addEventListener("click", () => {
     return
   }
   const link = document.createElement("a")
-  link.href = rawbtLink({
-    shop: shopName(),
-    date: new Date(lastSale.at).toLocaleString("pt-PT"),
-    items: `${lastSale.beers} x cerveja`,
-    total: saleTotal(lastSale),
-    tx: lastSale.hash,
-    link: explorerTx(lastSale.hash),
-  })
+  link.href = rawbtLink(receiptOf(lastSale))
   link.target = "_blank"
   link.rel = "noopener"
   link.click()
